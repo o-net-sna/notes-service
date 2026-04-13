@@ -2,9 +2,12 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"note-service/models"
 )
+
+var ErrNoteNotFound = errors.New("note not found")
 
 type NoteRepository struct {
 	db *sql.DB
@@ -32,6 +35,7 @@ func (r *NoteRepository) GetAll() ([]models.Note, error) {
 	query := `
 	SELECT id, title, content, created_at
 	FROM notes
+	ORDER BY id
 	`
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -52,6 +56,9 @@ func (r *NoteRepository) GetAll() ([]models.Note, error) {
 		}
 		notes = append(notes, note)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return notes, nil
 }
 
@@ -70,7 +77,7 @@ func (r *NoteRepository) GetByID(id int) (models.Note, error) {
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return models.Note{}, fmt.Errorf("note not found")
+			return models.Note{}, ErrNoteNotFound
 		}
 		return models.Note{}, fmt.Errorf("query failed: %w", err)
 	}
@@ -92,7 +99,7 @@ func (r *NoteRepository) Delete(id int) error {
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("note not found")
+		return ErrNoteNotFound
 	}
 
 	return nil

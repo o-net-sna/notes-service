@@ -52,7 +52,7 @@ func (h *NoteHandler) CreateNote(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *NoteHandler) GetNote(w http.ResponseWriter, r *http.Request) {
+func (h *NoteHandler) GetNotes(w http.ResponseWriter, r *http.Request) {
 	notes, err := h.repo.GetAll()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal error")
