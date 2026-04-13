@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"note-service/models"
+	"note-service/repository"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
