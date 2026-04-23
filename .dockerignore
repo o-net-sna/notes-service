@@ -1,0 +1,11 @@
+.git
+.gitignore
+.env
+.env.*
+bin/
+tmp/
+coverage.out
+*.log
+.DS_Store
+.idea/
+.vscode/
