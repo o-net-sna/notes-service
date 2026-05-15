@@ -11,9 +11,80 @@ import (
 	"os"
 	"time"
 
+	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/prometheus/client_golang/prometheus"
+    "github.com/prometheus/client_golang/prometheus/promhttp"
 	_ "github.com/lib/pq"
 )
+
+
+var (
+    httpRequestsTotal = prometheus.NewCounterVec(
+        prometheus.CounterOpts{
+            Name: "http_requests_total",
+            Help: "Total number of HTTP requests",
+        },
+        []string{"method", "endpoint", "status_code"},
+    )
+    httpRequestDuration = prometheus.NewHistogramVec(
+        prometheus.HistogramOpts{
+            Name:    "http_request_duration_seconds",
+            Help:    "HTTP request duration in seconds",
+            Buckets: prometheus.DefBuckets,
+        },
+        []string{"method", "endpoint"},
+    )
+    httpRequestsInFlight = prometheus.NewGaugeVec(
+        prometheus.GaugeOpts{
+            Name: "http_requests_in_flight",
+            Help: "Current number of HTTP requests in flight",
+        },
+        []string{"method", "endpoint"},
+    )
+)
+
+func init() {
+    prometheus.MustRegister(httpRequestsTotal)
+    prometheus.MustRegister(httpRequestDuration)
+    prometheus.MustRegister(httpRequestsInFlight)
+}
+
+func metricsMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        endpoint := r.URL.Path
+        if endpoint == "/" {
+            endpoint = "/whoami"
+        }
+        
+        method := r.Method
+        
+        // Track requests in flight
+        httpRequestsInFlight.WithLabelValues(method, endpoint).Inc()
+        defer httpRequestsInFlight.WithLabelValues(method, endpoint).Dec()
+        
+        start := time.Now()
+        rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+        
+        next.ServeHTTP(rw, r)
+        
+        duration := time.Since(start).Seconds()
+        
+        // Record metrics
+        httpRequestDuration.WithLabelValues(method, endpoint).Observe(duration)
+        httpRequestsTotal.WithLabelValues(method, endpoint, fmt.Sprintf("%d", rw.statusCode)).Inc()
+    })
+}
+
+type responseWriter struct {
+    http.ResponseWriter
+    statusCode int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+    rw.statusCode = code
+    rw.ResponseWriter.WriteHeader(code)
+}
 
 func main() {
 	databaseURL := getenv("DATABASE_URL", "postgres://postgres:12345@localhost:5432/notesdb?sslmode=disable")
@@ -66,8 +137,11 @@ func main() {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
+	r.Handle("/metrics", promhttp.Handler())
+	rWithMetrics := metricsMiddleware(r)
+
 	log.Printf("server started on %s", serverAddr)
-	log.Fatal(http.ListenAndServe(serverAddr, r))
+	log.Fatal(http.ListenAndServe(serverAddr, rWithMetrics))
 }
 
 func waitForDatabase(db *sql.DB, timeout time.Duration) error {

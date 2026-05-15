@@ -39,6 +39,33 @@ services:
     networks:
       - notes_network
 
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+    networks:
+      - notes_network
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    networks:
+      - notes_network
+
   nginx:
     image: nginx:1.27-alpine
     ports:
@@ -63,3 +90,5 @@ networks:
 
 volumes:
   postgres_data:
+  prometheus_data:
+  grafana_data:
