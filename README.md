@@ -3,6 +3,16 @@
 A containerized Notes REST API project developed for the **System and Network Administration** course.  
 The project demonstrates deployment and administration concepts including container orchestration, reverse proxying, monitoring, health checks and service integration.
 
+## Project Goal
+The purpose of this project is not only backend development but also demonstrating practical System Administration concepts:
+
+- service orchestration
+- reverse proxy configuration
+- monitoring
+- health checking
+- container networking
+- infrastructure deployment
+
 Technologies used:
 
 - Go
@@ -370,13 +380,3 @@ All services use health checks:
 - NGINX availability
 
 This ensures services start in the correct order
-
-## Project Goal
-The purpose of this project is not only backend development but also demonstrating practical System Administration concepts:
-
-- service orchestration
-- reverse proxy configuration
-- monitoring
-- health checking
-- container networking
-- infrastructure deployment
